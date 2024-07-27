@@ -16,6 +16,8 @@
 	import { VIEW_TYPE_GOOGLE_CALENDAR_WEEK, WeekCalendarView } from "../../view/WeekCalendarView";
 	import ViewSettings from "../components/ViewSettings.svelte";
 	import { onMount } from "svelte";
+    import {settingsAreCompleteAndLoggedIn} from "../../view/GoogleCalendarSettingTab";
+    import {EventDetailsModal} from "../../modal/EventDetailsModal";
 
     export let codeBlockOptions: CodeBlockOptions;
     export let isObsidianView = false;
@@ -115,11 +117,15 @@
     }
 
 
-    const onClickDay = (date: moment.Moment, isMenu:boolean) => {
-        new EventListModal(getEventsOfDay(events, date),"details", date, false, () => {
-            googleClearCachedEvents();
-            displayedMonth = displayedMonth
-        }).open();
+    const onClickDay = async (date: moment.Moment, isMenu:boolean) => {
+        const leaf = await plugin.initView(VIEW_TYPE_GOOGLE_CALENDAR_DAY);
+        if (leaf.view instanceof DayCalendarView) {
+            leaf.view.setDate(date);
+        }
+        // new EventListModal(getEventsOfDay(events, date),"details", date, false, () => {
+        //     googleClearCachedEvents();
+        //     displayedMonth = displayedMonth
+        // }).open();
     }
     
     const onClickWeek = async (week: moment.Moment, isMenu:boolean) => {
@@ -213,6 +219,22 @@
         // Add extra function for daily notes
         if(type === "daily") {
             menu.addSeparator()
+
+            menu.addItem((item) => {
+                item.setTitle("Create Event")
+                item.setIcon("calendar")
+                item.onClick(async () => {
+                    const canRun = settingsAreCompleteAndLoggedIn();
+
+                    if (!canRun) {
+                        return;
+                    }
+
+                    new EventDetailsModal({ start: {date: date.format("YYYY-MM-DD")}, end: {date: date.format("YYYY-MM-DD")} }, () => {
+                        googleClearCachedEvents()
+                    }).open()
+                });
+            })
 
             menu.addItem((item) => {
                 item.setTitle("Open Timeline View")
